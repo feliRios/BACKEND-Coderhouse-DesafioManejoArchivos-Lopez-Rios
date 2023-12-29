@@ -14,11 +14,28 @@ function save(param_path, param_products) {
     })
 }
 
+async function writeFile(param_path, param_products) {
+  try {
+    await fs.promises.writeFile(param_path, JSON.stringify(param_products), { encoding: 'utf-8' });
+  } catch(e) {
+    console.log(`Hubo un error: ${e}`);
+  }
+}
+
+
 class ProductManager {
   constructor(){
     this.products = [];
     this.productId = 1;
+
+    // El PATH del archivo
+
     this.path = './files/products.json';
+
+    // Crea un products.json en caso de que no exista (primera ejecucion)
+    if(!fs.existsSync(this.path)) {
+      writeFile(this.path, this.products);
+    }
   }
 
   getProducts() {
@@ -186,6 +203,6 @@ const pm = new ProductManager();
 
 // pm.getProducts();
 
-pm.deleteProduct(2);
+// pm.deleteProduct(2);
 
 // pm.getProducts();
