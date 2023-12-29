@@ -87,6 +87,7 @@ class ProductManager {
               this.products.push(product);
 
               await writeFile(this.path, this.products);
+              console.log("Producto agregado correctamente");
 
             } else {
               console.log(`Error: ya existe un producto con el codigo ${code}`);
@@ -102,94 +103,83 @@ class ProductManager {
 
   }
 
-  getProductById(id) {
+  async getProductById(id) {
     // Funcion: retorna un producto de this.products con id = id
-    // Funcion asincrona autoinvocada
 
-    (
-      async () => {
-        try {
-          const data = await fs.promises.readFile(this.path, 'utf-8');
-          this.products = JSON.parse(data);
-          const element = this.products.find(e => e.id === id);
-          if (element){
-            console.log(element);
-          } else {
-            console.log(`No existe ningun producto con el ID ${id}`);
-          }
-        } catch(err) {
-            console.log(`Hubo un error al traer un producto con ID '${id}': ${err}`);
-        }
+    try {
+      // data -> this.products
+      const data = await this.getProducts();
+
+      const element = data.find(e => e.id === id);
+      if(element){
+        return element;
+      } else {
+        console.log(`No existe ningun producto con el ID ${id} para mostrar`);
       }
-    )();
+    } catch(e) {
+      console.log(`Hubo un error al traer un producto con ID '${id}': ${err}`);
+    }
   }
 
-  updateProduct(id, title, description, price, thumbnail, code, stock) {
-    
-    // Funcion asincrona autoinvocada
+  async updateProduct(id, title, description, price, thumbnail, code, stock) {
+    // Funcion: void
 
-    (
-      async () => {
-        try {
-          const data = await fs.promises.readFile(this.path, 'utf-8');
-          this.products = JSON.parse(data);
-          const element = this.products.find(e => e.id === id);
-          if (element){
-            this.products.map((item) => {
-              if(item.id === element.id){
-                if (!title || !description || !price || !thumbnail || !code || !stock){
-                  // Este condicional valida que todos los campos hayan sido completados
-                  console.log("Todos los campos son obligatorios.");
-                } else {
-                  item.title = title;
-                  item.description = description;
-                  item.price = price;
-                  item.thumbnail = thumbnail;
-                  item.code = code;
-                  item.stock = stock;
+    try {
+      // data -> this.products
+      const data = await this.getProducts();
+      // element -> el producto de ID = ID
+      const element = await this.getProductById(id);
+      if(element) {
+        data.map((item) => {
+          if(item.id === element.id){
+            if (!title || !description || !price || !thumbnail || !code || !stock){
+              // Este condicional valida que todos los campos hayan sido completados
+              console.log("Todos los campos son obligatorios.");
+            } else {
+              item.title = title;
+              item.description = description;
+              item.price = price;
+              item.thumbnail = thumbnail;
+              item.code = code;
+              item.stock = stock;
 
-                  save(this.path, this.products);
+              writeFile(this.path, data);
+              console.log("Producto actualizado correctamente");
 
-                }
-              }
-            })
-            
-          } else {
-            console.log(`No existe ningun producto con el ID ${id}`);
+            }
           }
-        } catch(err) {
-            console.log(`Hubo un error al actualizar el producto '${title}': ${err}`);
-        }
+        })
+      } else {
+        console.log(`No existe ningun producto con el ID '${id}' para actualizar`);
       }
-    )()
+    } catch(e) {
+      console.log(`UpdateProduct: hubo un error al obtener el producto con ID ${id}. ${e}`);
+    }
+
   }
 
-  deleteProduct(id) {
-    
-    // Funcion asincrona autoinvocada
-    
-    (
-      async () => {
-        try {
-          const data = await fs.promises.readFile(this.path, 'utf-8');
-          this.products = JSON.parse(data);
-          const element = this.products.find(e => e.id === id);
-          if (element){
-            const eIndex = this.products.indexOf(element);
-            this.products.splice(eIndex, 1);
-            await writeFile(this.path, this.products);
-            console.log("Producto eliminado correctamente");
+  async deleteProduct(id) {
+    // Funcion: void
 
-          } else {
-            console.log(`No existe ningun producto con el ID ${id}`);
-          }
-        } catch(err) {
-            console.log(`Hubo un error al tratar de eliminar el producto con ID '${id}': ${err}`);
-        }
+    try {
+      // data -> this.products
+      const data = await this.getProducts();
+      // element -> el producto de ID = ID
+      const element = await this.getProductById(id);
+
+      if(element) {
+        const eIndex = data.indexOf(element);
+        data.splice(eIndex, 1);
+        await writeFile(this.path, data);
+        console.log("Producto eliminado correctamente");
+      } else {
+        console.log(`No existe ningun producto con el ID ${id}`);
       }
-    )()
-  }
 
+    } catch(e) {
+      console.log(`DeleteProduct. Hubo un error al tratar de eliminar el producto con ID '${id}': ${err}`);
+    }
+  }
 }
 
 
@@ -225,5 +215,23 @@ class ProductManager {
           console.log(_);
         })
     }, 4000)
+
+    setTimeout(() => {
+      pm.getProductById(2)
+        .then(_ => {
+          console.log(_);
+        })
+    }, 5000)
+
+    setTimeout(() => {
+      pm.updateProduct(2, "Monitor 144Hz", "Es 144Hz", 321, "imagen", 234127, 8);
+    }, 6000)
+
+    setTimeout(() => {
+      pm.getProductById(2)
+        .then(_ => {
+          console.log(_);
+        })
+    }, 7000)
   }
 )();
