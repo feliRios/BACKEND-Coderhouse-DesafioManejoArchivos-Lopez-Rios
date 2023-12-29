@@ -4,21 +4,14 @@
 
 const fs = require('fs');
 
-function save(param_path, param_products) {
-  fs.promises.writeFile(param_path, JSON.stringify(param_products), 'utf-8')
-    .then(res => {
-      console.log("Producto guardado correctamente");
-    })
-    .catch(err => {
-      console.log(`Hubo un error: ${err}`);
-    })
-}
 
 async function writeFile(param_path, param_products) {
+  // Funcion: void
+  // Funcion encargada de ingresar los productos al archivo
   try {
     await fs.promises.writeFile(param_path, JSON.stringify(param_products), { encoding: 'utf-8' });
   } catch(e) {
-    console.log(`Hubo un error: ${e}`);
+    console.log(`Hubo un error al escribir el archivo: ${e}`);
   }
 }
 
@@ -32,67 +25,85 @@ class ProductManager {
 
     this.path = './files/products.json';
 
-    // Crea un products.json en caso de que no exista (primera ejecucion)
-    if(!fs.existsSync(this.path)) {
-      writeFile(this.path, this.products);
+    this.initializeFile()
+  }
+
+  async initializeFile() {
+    // Funcion: void
+    // Funcion encargada de inicializar el archivo (crear un products.json) 
+    // en caso que no exista (primera ejecucion)
+    try {
+      if(!fs.existsSync(this.path)) {
+        await writeFile(this.path, this.products);
+        console.log('Archivo inicializado correctamente');
+      }
+    } catch(e) {
+      console.log(`Hubo un error al inicializar el archivo: ${e}`);
     }
   }
 
-  getProducts() {
-    fs.promises.readFile(this.path, 'utf-8')
-      .then(data => {
-        this.products = JSON.parse(data);
-        console.log(this.products);
-      })
-      .catch(err => `Hubo un error: ${err}`);
+  async getProducts() {
+    // Funcion: retorna this.products
+    // Este metodo pasa a ser asincrono para poder ser reutilizado en otros
+    // metodos de la clase
+
+    try {
+      const noParsedData = await fs.promises.readFile(this.path, 'utf-8');
+      this.products = JSON.parse(noParsedData) 
+      return this.products;
+    } catch(e) {
+      console.log(`Hubo un error al obtener los productos: ${e}`);
+    }
+
+
   }
 
-  addProduct(title, description, price, thumbnail, code, stock) {
+  async addProduct(title, description, price, thumbnail, code, stock) {
+    // Funcion: void
+    // Este metodo pasa a ser asincrono para poder ser reutilizado en otros
+    // metodos de la clase
 
-    // Funcion asincrona autoinvocada
+    if (!title || !description || !price || !thumbnail || !code || !stock){
+      // Este condicional valida que todos los campos hayan sido completados
+      console.log("Todos los campos son obligatorios.");
+    } else {
+      let bandera = true;
 
-    (
-      async () => {
-        if (!title || !description || !price || !thumbnail || !code || !stock){
-          // Este condicional valida que todos los campos hayan sido completados
-          console.log("Todos los campos son obligatorios.");
-        } else {
-          let bandera = true;
-          try {
-            const data = await fs.promises.readFile(this.path, 'utf-8');
-            this.products = JSON.parse(data);
-            
-            do {  
-            // Este bucle cumple la funcion de incrementar automaticamente el ID del producto en caso
-            // de que encuentre un repetido 
-    
-              if (!this.products.some(prod => prod.id === this.productId)) {
-                // Este condicional valida que no exista ningun producto con el mismo ID que el generado
-                bandera = false;
-                if (!this.products.some(prod => prod.code === code)){
-                  // Este condicional valida que no exista ningun producto con el mismo codigo que el
-                  const product = { id: this.productId, title: title, description: description, price: price, thumbnail: thumbnail, code: code, stock: stock };
-                  this.products.push(product);
-      
-                  save(this.path, this.products);
-      
-                } else {
-                  console.log(`Error: ya existe un producto con el codigo ${code}`);
-                }
-              } else {
-                this.productId += 1;
-              }
-            } while (bandera)
-          } catch(err) {
-            console.log(`Hubo un error: ${err}`);
+      try {
+        
+        // data -> this.products
+        const data = await this.getProducts();
+
+        do {  
+          // Este bucle cumple la funcion de incrementar automaticamente el ID del producto en caso
+          // de que encuentre un repetido 
+
+          if (!data.some(prod => prod.id === this.productId)) {
+            // Este condicional valida que no exista ningun producto con el mismo ID que el generado
+            bandera = false;
+            if (!data.some(prod => prod.code === code)){
+              // Este condicional valida que no exista ningun producto con el mismo codigo que el
+              const product = { id: this.productId, title: title, description: description, price: price, thumbnail: thumbnail, code: code, stock: stock };
+              this.products.push(product);
+
+              await writeFile(this.path, this.products);
+
+            } else {
+              console.log(`Error: ya existe un producto con el codigo ${code}`);
+            }
+          } else {
+            this.productId += 1;
           }
-        }
+        } while (bandera)
+      } catch(err) {
+        console.log(`Hubo un error al intentar agregar un nuevo producto '${title}': ${err}`);
       }
-    )();
+    }
+
   }
 
   getProductById(id) {
-
+    // Funcion: retorna un producto de this.products con id = id
     // Funcion asincrona autoinvocada
 
     (
@@ -107,7 +118,7 @@ class ProductManager {
             console.log(`No existe ningun producto con el ID ${id}`);
           }
         } catch(err) {
-            console.log(`Hubo un error: ${err}`);
+            console.log(`Hubo un error al traer un producto con ID '${id}': ${err}`);
         }
       }
     )();
@@ -147,7 +158,7 @@ class ProductManager {
             console.log(`No existe ningun producto con el ID ${id}`);
           }
         } catch(err) {
-            console.log(`Hubo un error: ${err}`);
+            console.log(`Hubo un error al actualizar el producto '${title}': ${err}`);
         }
       }
     )()
@@ -166,20 +177,14 @@ class ProductManager {
           if (element){
             const eIndex = this.products.indexOf(element);
             this.products.splice(eIndex, 1);
-
-            fs.promises.writeFile(this.path, JSON.stringify(this.products), 'utf-8')
-              .then(res => {
-                console.log("Producto ELIMINADO correctamente");
-              })
-              .catch(err => {
-                console.log(`Hubo un error: ${err}`);
-              })
+            await writeFile(this.path, this.products);
+            console.log("Producto eliminado correctamente");
 
           } else {
             console.log(`No existe ningun producto con el ID ${id}`);
           }
         } catch(err) {
-            console.log(`Hubo un error: ${err}`);
+            console.log(`Hubo un error al tratar de eliminar el producto con ID '${id}': ${err}`);
         }
       }
     )()
@@ -187,22 +192,38 @@ class ProductManager {
 
 }
 
-const pm = new ProductManager();
 
-// pm.getProducts();
 
-// pm.addProduct("TV", "Es una tele", 1999, "https://image.com", 234123, 5);
+// -------- TESTING --------
 
-// pm.addProduct("Monitor", "Es un monitor", 1989, "https://image.com", 234124, 5);
 
-// pm.getProducts();
+(
+  // Funcion "main" autonivocada
+  function main(){
+    
+    const pm = new ProductManager();
 
-// pm.getProductById(3);
+    setTimeout(() => {
+      // Esperar a que se completen las operaciones asíncronas antes de continuar
+      pm.getProducts()
+        .then(_ => {
+          console.log(_);
+        })
+    }, 1000)
 
-// pm.updateProduct(2, "Ultrawide", "Es un monitorincic", 1888, "url", 2938294, 10);
+    setTimeout(() => {
+      pm.addProduct("TV", "Es una tele", 1999, "https://image.com", 234125, 5);
+    }, 2000)
 
-// pm.getProducts();
+    setTimeout(() => {
+      pm.addProduct("Monitor", "Es un monitor", 1989, "https://image.com", 234126, 5);
+    }, 3000)
 
-// pm.deleteProduct(2);
-
-// pm.getProducts();
+    setTimeout(() => {
+      pm.getProducts()
+        .then(_ => {
+          console.log(_);
+        })
+    }, 4000)
+  }
+)();
