@@ -23,7 +23,7 @@ class ProductManager {
 
     // El PATH del archivo
 
-    this.path = './files/products.json';
+    this.path = './products.json';
 
     this.initializeFile()
   }
