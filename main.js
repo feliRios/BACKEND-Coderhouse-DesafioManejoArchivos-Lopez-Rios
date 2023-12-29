@@ -193,8 +193,10 @@ class ProductManager {
     
     const pm = new ProductManager();
 
+    // Estableci setTimeouts para esperar a que se completen las operaciones asíncronas 
+    // antes de continuar
+
     setTimeout(() => {
-      // Esperar a que se completen las operaciones asíncronas antes de continuar
       pm.getProducts()
         .then(_ => {
           console.log(_);
@@ -233,5 +235,16 @@ class ProductManager {
           console.log(_);
         })
     }, 7000)
+
+    setTimeout(() => {
+      pm.deleteProduct(1);
+    }, 8000)
+
+    setTimeout(() => {
+      pm.getProducts()
+        .then(_ => {
+          console.log(_);
+        })
+    }, 9000)
   }
 )();
